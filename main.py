@@ -81,7 +81,7 @@ def demo_grading_vis(estimate_next_pos_fcn, target_bot, history = None):
         #End of Visualization
     return localized
 #
-test_target = Robot(0.5, -0.5, 3.08457233661, 2*pi /-5, 3.08457233661 ,8, 20)
+test_target = Robot(13.6383033581, -19.2494482213, 3.08457233661, 2*pi /-5, 3.08457233661 ,8, 20)
 mnoise = .05 * test_target.distance
 test_target.set_noise(0.0, 0.0, .05)
 demo_grading_vis(estimate_next_pos,test_target)
