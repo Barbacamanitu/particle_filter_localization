@@ -48,6 +48,11 @@ class Visualisation:
                                                 font_size=24,
                                                 x=self.center[0], y=self.window.height-50,
                                                 anchor_x='center', anchor_y='center')
+        self.pauseLabel = pyglet.text.Label('Paused.\nPress Spacebar',
+                                                font_name='Times New Roman',
+                                                font_size=40,
+                                                x=self.center[0], y=self.center[1],
+                                                anchor_x='center', anchor_y='center')
         self.paused = True
         self.window.on_key_press = self.on_key_press
         self.window.on_draw = self.on_draw
@@ -56,7 +61,8 @@ class Visualisation:
         self.prediction.scale = 2.0
         self.bot.scale = 1.0
         self.transform_matrix = dm.translation_matrix(self.center[0],self.center[1])@dm.scale_matrix(4.0,4.0)
-
+        self.bot.position = dm.tmat(self.transform_matrix,(0,0))
+        self.prediction.position = dm.tmat(self.transform_matrix, (-10, -10))
     def on_key_press(self,symbol, modifiers):
         if symbol == key.SPACE:
             self.paused = False if self.paused else True
@@ -66,7 +72,8 @@ class Visualisation:
         self.bot.draw()
         self.prediction.draw()
         self.localizedLabel.draw()
-
+        if self.paused:
+            self.pauseLabel.draw()
 
     def run(self):
         pyglet.clock.schedule_interval(self.on_update, self.updateInt)
