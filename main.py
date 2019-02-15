@@ -1,139 +1,66 @@
 from robot import Robot
 from math import *
-import turtle
-import numpy as np
 import random
-import pyglet
-import math
-from pyglet.window import key
+import visual.visualisation as vs
+
+
 def distance_between(point1, point2):
     """Computes distance between point1 and point2. Points are (x, y) pairs."""
     x1, y1 = point1
     x2, y2 = point2
     return sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
-def center_image(image):
-    """Sets an image's anchor point to its center"""
-    image.anchor_x = image.width // 2
-    image.anchor_y = image.height // 2
-
-
-dis_tolerance = 0.02
-def estimate_next_pos(measurement, particles):
-    #simple random guess around the last measurement.
-    estimate = (measurement[0] + random.uniform(-5.0,5.0)
-                ,measurement[1]+random.uniform(-5.0,5.0))
-    return estimate, particles
-
-def createGraphics(mb):
-    pyglet.resource.path = ['./resources']
-    pyglet.resource.reindex()
-    botImg = pyglet.resource.image("robot.png")
-    predictionImg = pyglet.resource.image("prediction.png")
-    measurementImg = pyglet.resource.image("measurement.png")
-    center_image(botImg)
-    center_image(predictionImg)
-    center_image(measurementImg)
-    botSprite = pyglet.sprite.Sprite(botImg,batch=mb)
-    predictionSprite = pyglet.sprite.Sprite(predictionImg,batch=mb)
-    measurementSprite = pyglet.sprite.Sprite(measurementImg,batch=mb)
-    tscale = 1.0
-    botSprite.scale = tscale
-    predictionSprite.scale = tscale
-    measurementSprite.scale = tscale
-
-
-    return (botSprite,predictionSprite,measurementSprite)
-
-#create window
-window = pyglet.window.Window()
-coordScale = 2.0
-pyglet.gl.glClearColor(0.5,0.8,.9,1)
-#center of window
-center = [window.width/2.0,window.height/2.0]
-center[0]/=coordScale
-center[1]/=coordScale
+dis_tolerance = 0.55
 localized = False
 counter = 0
-
-# Create the needed sprites
-main_batch = pyglet.graphics.Batch()
-bot, pred, meas = createGraphics(main_batch)
-localizedLabel = pyglet.text.Label('Not Localized',
-                              font_name='Times New Roman',
-                              font_size=24,
-                              x=window.width // 2, y=window.height // 4,
-                              anchor_x='center', anchor_y='center')
-paused = True
-# Create the Robot class, which handles movement and noise, etc.
-# To draw the bot sprite, we will copy the location/orientation from the robot object.
+paused = False
 startPos = [9.84595717195,-3.82584680823]
 test_target = Robot(startPos[0],startPos[1], 3.08457233661, 2*pi /-5, 3.08457233661 ,8, 20)
 test_target.set_noise(0.0, 0.0, .05)
 OTHER = None
 
-@window.event
-def on_key_press(symbol, modifiers):
-    global paused
-    if (symbol == key.SPACE):
-        paused = False if paused else True
+def estimate_next_pos(measurement, particles):
+    # simple random guess around the last measurement.
+    estimate = (measurement[0] + random.uniform(-5.0,5.0)
+                ,measurement[1]+random.uniform(-5.0,5.0))
+    return estimate, particles
 
 
 
-@window.event
-def on_draw():
-    global localized
-    window.clear()
 
-    bot.draw()
-    pred.draw()
-    meas.draw()
-    #meas.visible = False
 
-    localizedLabel.draw()
-
-totalTime = 0.0
 def update(dt):
-    global totalTime
     global counter, coordScale
     global localized
     global test_target
     global OTHER
-    global bot, pred, meas
     global dis_tolerance
+    global vz
     measurement = None
     position_guess = None
     if not paused:
-        totalTime += dt
         counter += 1
         distance_tolerance = dis_tolerance * test_target.distance
         if not localized and counter <= 1000:
             measurement = test_target.sense()
+            vz.add_measurement(measurement)
             position_guess, OTHER = estimate_next_pos(measurement,OTHER)
             test_target.move_in_polygon()
+            vz.update_robot(test_target)
+            vz.add_prediction(position_guess)
             true_position = (test_target.x, test_target.y)
             error = distance_between(position_guess, true_position)
             print("error: ", error)
             print("threshold: ", distance_tolerance)
             if error <= distance_tolerance:
-                localizedLabel.text = "You got it right! It took you "+ str(counter)+ " steps to localize."
+                vz.set_localized(counter)
                 localized = True
             if counter == 1000:
                 print("Sorry, it took you too many steps to localize the target.")
-            #meas.visible = True
-            pred.visible = True
-            #.opacity =sin(totalTime)*50.0+50.0
-            #meas.set_position(center[0] + measurement[0] * coordScale, measurement[1] * coordScale + center[1])
-            pred.set_position(center[0] + position_guess[0] * coordScale, position_guess[1] * coordScale + center[1])
-    bot.set_position(center[0] + test_target.x * coordScale, test_target.y * coordScale + center[1])
-    bot.rotation = math.degrees(-test_target.heading)
 
-
-pyglet.clock.schedule_interval(update, 1/10.0)
-pyglet.app.run()
-
-
-
+vz = vs.Visualisation(coord_scale=2.0)
+vz.on_update_func(update,1.0/10.0)
+vz.run()
 {'test_case': 7,
                       'target_x': -17.2113204789,
                       'target_y': 10.5496426749,
